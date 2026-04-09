@@ -1,1367 +1,1077 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora QR Generator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: rgba(255, 255, 255, 0.04);
-            --bg-tertiary: rgba(255, 255, 255, 0.08);
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0b0;
-            --accent: linear-gradient(135deg, #7c3aed, #0ea5e9, #ec4899);
-            --glow: rgba(124, 58, 237, 0.3);
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Gen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080810;
+      --sidebar: #0f0f1a;
+      --panel: rgba(255,255,255,0.04);
+      --panel-border: rgba(255,255,255,0.08);
+      --text: #f0f0ff;
+      --muted: #6b7280;
+      --accent: linear-gradient(135deg, #7c3aed, #06b6d4, #ec4899);
+      --accent-solid: #7c3aed;
+      --radius: 14px;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --button: #7c3aed;
+      --button-hover: #06b6d4;
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: 'Syne', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'DM Mono', monospace;
+      background: radial-gradient(circle at top left, rgba(14,166,211,0.15), transparent 18%),
+                  radial-gradient(circle at bottom right, rgba(236,72,153,0.12), transparent 20%),
+                  var(--bg);
+      color: var(--text);
+    }
 
-        .aurora-header {
-            position: relative;
-            height: 120px;
-            background: linear-gradient(45deg, #0a0a0f, #1a1a2e, #16213e, #0f3460);
-            overflow: hidden;
-        }
+    #app {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
 
-        .aurora-blob {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(124, 58, 237, 0.3), transparent 70%);
-            border-radius: 50%;
-            animation: aurora-float 6s ease-in-out infinite;
-        }
+    #sidebar {
+      width: 340px;
+      min-width: 340px;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      background: var(--sidebar);
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
 
-        .aurora-blob:nth-child(1) {
-            top: -100px;
-            left: -100px;
-            animation-delay: 0s;
-        }
+    #preview-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      overflow: auto;
+      position: relative;
+    }
 
-        .aurora-blob:nth-child(2) {
-            top: -50px;
-            right: -50px;
-            animation-delay: 2s;
-            background: radial-gradient(circle, rgba(14, 165, 233, 0.3), transparent 70%);
-        }
+    #preview-pane::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(124,58,237,0.12), transparent 18%),
+                  radial-gradient(circle at 70% 80%, rgba(6,182,212,0.1), transparent 18%);
+      pointer-events: none;
+    }
 
-        .aurora-blob:nth-child(3) {
-            bottom: -100px;
-            left: 50%;
-            animation-delay: 4s;
-            background: radial-gradient(circle, rgba(236, 72, 153, 0.3), transparent 70%);
-        }
+    header {
+      margin-bottom: 28px;
+    }
 
-        @keyframes aurora-float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
+    .brand-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 2.2vw, 3rem);
+      margin: 0 0 6px;
+      letter-spacing: -0.04em;
+      background: var(--accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-        .header-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-        }
+    .brand-copy {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 290px;
+    }
 
-        .header-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: var(--accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
-        }
+    #qr-output {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+    }
 
-        .container {
-            display: flex;
-            min-height: calc(100vh - 120px);
-        }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
 
-        .sidebar {
-            width: 350px;
-            background: var(--bg-secondary);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            overflow-y: auto;
-        }
+    .panel h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      margin: 0 0 12px;
+      letter-spacing: 0.02em;
+    }
 
-        .main-panel {
-            flex: 1;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    .panel .section-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
 
-        .section {
-            margin-bottom: 2rem;
-            background: var(--bg-tertiary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+    label {
+      font-size: 0.83rem;
+      color: var(--muted);
+    }
 
-        .section-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-            cursor: pointer;
-        }
+    .control {
+      width: 100%;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-right: 0.5rem;
-        }
+    textarea,
+    input[type="text"],
+    input[type="color"],
+    select {
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
 
-        .section-rule {
-            flex: 1;
-            height: 1px;
-            background: var(--accent);
-        }
+    textarea {
+      width: 100%;
+      min-height: 84px;
+      resize: vertical;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      outline: none;
+      max-height: 120px;
+    }
 
-        .section-content {
-            display: block;
-        }
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      outline: none;
+    }
 
-        .collapsed .section-content {
-            display: none;
-        }
+    input[type="color"] {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
 
-        .input-tabs {
-            display: flex;
-            margin-bottom: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 4px;
-        }
+    .pill-group,
+    .icon-grid,
+    .radio-group,
+    .button-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-        .tab {
-            flex: 1;
-            padding: 0.5rem;
-            text-align: center;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
+    .pill {
+      flex: 1 1 calc(33.333% - 10px);
+      min-width: 92px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      transition: all 0.25s ease;
+      user-select: none;
+    }
 
-        .tab.active {
-            background: var(--accent);
-            color: white;
-        }
+    .pill.active {
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 12px 30px rgba(124,58,237,0.18);
+    }
 
-        .input-field {
-            width: 100%;
-            padding: 0.75rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-            margin-bottom: 0.5rem;
-        }
+    .icon-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: grid;
+    }
 
-        .input-field:focus {
-            outline: none;
-            border-color: #7c3aed;
-            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
-        }
+    .icon-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
 
-        .slider-container {
-            margin-bottom: 1rem;
-        }
+    .icon-btn.active {
+      border-color: rgba(124,58,237,0.8);
+      background: rgba(124,58,237,0.16);
+      transform: translateY(-1px);
+    }
 
-        .slider {
-            width: 100%;
-            -webkit-appearance: none;
-            height: 6px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-        }
+    .small-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
-        }
+    .small-row .input-group {
+      flex: 1;
+      min-width: 120px;
+    }
 
-        .slider-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
+    .slider-row {
+      display: grid;
+      gap: 10px;
+    }
 
-        .radio-group {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #7c3aed;
+    }
 
-        .radio-option {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        .radio-option input[type="radio"] {
-            margin-right: 0.5rem;
-        }
+    .toggle-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: #7c3aed;
+    }
 
-        .color-picker {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
+    .warning-text {
+      color: #f59e0b;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-        .color-input {
-            width: 50px;
-            height: 30px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    .button-stack button,
+    .export-row button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      color: white;
+      font-size: 0.94rem;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-        .hex-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            padding: 0.25rem 0.5rem;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-            width: 80px;
-        }
+    .button-stack button:hover,
+    .export-row button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(124,58,237,0.25);
+    }
 
-        .toggle {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            margin-bottom: 1rem;
-        }
+    .export-row {
+      display: grid;
+      gap: 12px;
+    }
 
-        .toggle input[type="checkbox"] {
-            margin-right: 0.5rem;
-        }
+    #preview-card {
+      position: relative;
+      width: min(100%, 480px);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 26px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+      overflow: hidden;
+      z-index: 1;
+    }
 
-        .shape-selector {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
+    #preview-card::before {
+      content: '';
+      position: absolute;
+      inset: -40px;
+      background: radial-gradient(circle at 20% 20%, rgba(124,58,237,0.12), transparent 16%),
+                  radial-gradient(circle at 80% 80%, rgba(6,182,212,0.1), transparent 16%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        .shape-btn {
-            width: 40px;
-            height: 40px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
+    #preview-card > * {
+      position: relative;
+      z-index: 1;
+    }
 
-        .shape-btn.active {
-            border-color: #7c3aed;
-            background: rgba(124, 58, 237, 0.1);
-        }
+    #final-canvas {
+      width: 100%;
+      height: auto;
+      border-radius: 20px;
+      background: white;
+      display: block;
+      margin: 0 auto;
+      max-width: 480px;
+      aspect-ratio: 1 / 1;
+    }
 
-        .pattern-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
+    .status-row {
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
 
-        .pattern-btn {
-            padding: 0.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-        }
+    .status-pill,
+    .badge-pill {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+    }
 
-        .pattern-btn.active {
-            background: var(--accent);
-            color: white;
-        }
+    .status-pill.active {
+      border-color: rgba(16,185,129,0.35);
+      color: #10b981;
+    }
 
-        .btn {
-            padding: 0.75rem 1.5rem;
-            background: var(--accent);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-right: 0.5rem;
-        }
+    .status-pill.risk {
+      border-color: rgba(245,158,11,0.35);
+      color: #f59e0b;
+    }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
-        }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+    }
 
-        .btn.secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-        }
+    #generate-btn {
+      margin-top: 24px;
+      width: 100%;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+    }
 
-        .preview-container {
-            background: var(--bg-secondary);
-            backdrop-filter: blur(20px);
-            border-radius: 16px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            max-width: 600px;
-            width: 100%;
-        }
-
-        .preview-canvas {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .scannability-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 1rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .scannability-good {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .scannability-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        .phone-mockup {
-            position: relative;
-            display: inline-block;
-        }
-
-        .phone-frame {
-            width: 250px;
-            height: 500px;
-            background: #000;
-            border-radius: 30px;
-            padding: 20px;
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .phone-screen {
-            width: 100%;
-            height: 100%;
-            background: white;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .phone-qr {
-            max-width: 80%;
-            max-height: 80%;
-        }
-
-        .export-options {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .history-strip {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-        }
-
-        .history-item {
-            width: 80px;
-            height: 80px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover {
-            border-color: #7c3aed;
-        }
-
-        .history-qr {
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 4px;
-        }
-
-        .loading-shimmer {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .loading-shimmer::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                order: 2;
-            }
-            .main-panel {
-                order: 1;
-            }
-            .header-title {
-                font-size: 2rem;
-            }
-        }
-    </style>
+    @media (max-width: 768px) {
+      #app {
+        flex-direction: column;
+      }
+      #sidebar {
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        max-height: 60vh;
+      }
+      #preview-pane {
+        padding: 24px 18px 18px;
+        order: 1;
+      }
+      header {
+        text-align: center;
+      }
+      .panel {
+        margin-bottom: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="aurora-header">
-        <div class="aurora-blob"></div>
-        <div class="aurora-blob"></div>
-        <div class="aurora-blob"></div>
-        <div class="header-content">
-            <h1 class="header-title">Aurora QR Generator</h1>
+  <div id="app">
+    <aside id="sidebar">
+      <header>
+        <h1 class="brand-title">QR Gen</h1>
+        <p class="brand-copy">Create a beautiful, scan-ready QR code instantly with a sleek Obsidian Aura interface.</p>
+      </header>
+
+      <section class="panel" id="content-panel">
+        <h2>CONTENT</h2>
+        <div class="pill-group" id="type-pills">
+          <div class="pill active" data-type="URL">URL</div>
+          <div class="pill" data-type="Text">Text</div>
+          <div class="pill" data-type="WiFi">WiFi</div>
+          <div class="pill" data-type="vCard">vCard</div>
+          <div class="pill" data-type="Email">Email</div>
         </div>
-    </div>
-
-    <div class="container">
-        <div class="sidebar">
-            <!-- Input Types -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <span class="section-title">Input Type</span>
-                    <div class="section-rule"></div>
-                </div>
-                <div class="section-content">
-                    <div class="input-tabs">
-                        <div class="tab active" data-type="url">URL</div>
-                        <div class="tab" data-type="text">Text</div>
-                        <div class="tab" data-type="email">Email</div>
-                        <div class="tab" data-type="sms">SMS</div>
-                        <div class="tab" data-type="phone">Phone</div>
-                        <div class="tab" data-type="wifi">WiFi</div>
-                        <div class="tab" data-type="vcard">vCard</div>
-                        <div class="tab" data-type="social">Social</div>
-                    </div>
-                    <div id="input-fields">
-                        <input type="text" class="input-field" id="url-input" placeholder="https://example.com" value="https://example.com">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Style & Customization -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <span class="section-title">Style & Customization</span>
-                    <div class="section-rule"></div>
-                </div>
-                <div class="section-content">
-                    <div class="slider-container">
-                        <label>Size: <span id="size-value">256</span>px</label>
-                        <input type="range" class="slider" id="size-slider" min="128" max="1024" value="256">
-                    </div>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="error-correction" value="L" checked> L
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="error-correction" value="M"> M
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="error-correction" value="Q"> Q
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="error-correction" value="H"> H
-                        </label>
-                    </div>
-                    <div class="color-picker">
-                        <label>Foreground:</label>
-                        <input type="color" class="color-input" id="fg-color" value="#000000">
-                        <input type="text" class="hex-input" id="fg-hex" value="#000000">
-                    </div>
-                    <div class="color-picker">
-                        <label>Background:</label>
-                        <input type="color" class="color-input" id="bg-color" value="#ffffff">
-                        <input type="text" class="hex-input" id="bg-hex" value="#ffffff">
-                        <label class="toggle">
-                            <input type="checkbox" id="transparent-bg"> Transparent
-                        </label>
-                    </div>
-                    <div>
-                        <label>Dot Shape:</label>
-                        <div class="shape-selector">
-                            <div class="shape-btn active" data-shape="square">□</div>
-                            <div class="shape-btn" data-shape="rounded">▢</div>
-                            <div class="shape-btn" data-shape="dots">●</div>
-                            <div class="shape-btn" data-shape="diamond">◆</div>
-                            <div class="shape-btn" data-shape="star">★</div>
-                        </div>
-                    </div>
-                    <div>
-                        <label>Pattern Overlay:</label>
-                        <div class="pattern-selector">
-                            <div class="pattern-btn active" data-pattern="none">None</div>
-                            <div class="pattern-btn" data-pattern="blossom">Blossom</div>
-                            <div class="pattern-btn" data-pattern="waves">Waves</div>
-                            <div class="pattern-btn" data-pattern="aurora">Aurora</div>
-                            <div class="pattern-btn" data-pattern="hex">Hex</div>
-                            <div class="pattern-btn" data-pattern="stardust">Stardust</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Center Logo -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <span class="section-title">Center Logo</span>
-                    <div class="section-rule"></div>
-                </div>
-                <div class="section-content">
-                    <input type="file" id="logo-upload" accept="image/*" style="margin-bottom: 1rem;">
-                    <div class="slider-container">
-                        <label>Logo Size: <span id="logo-size-value">20</span>%</label>
-                        <input type="range" class="slider" id="logo-size-slider" min="10" max="35" value="20">
-                    </div>
-                    <div>
-                        <label>Logo Shape:</label>
-                        <div class="shape-selector">
-                            <div class="shape-btn active" data-logo-shape="square">□</div>
-                            <div class="shape-btn" data-logo-shape="circle">○</div>
-                            <div class="shape-btn" data-logo-shape="rounded">▢</div>
-                        </div>
-                    </div>
-                    <div class="color-picker">
-                        <label>Border Color:</label>
-                        <input type="color" class="color-input" id="logo-border-color" value="#ffffff">
-                        <input type="text" class="hex-input" id="logo-border-hex" value="#ffffff">
-                    </div>
-                    <div class="slider-container">
-                        <label>Border Thickness: <span id="border-thickness-value">2</span>px</label>
-                        <input type="range" class="slider" id="border-thickness-slider" min="0" max="10" value="2">
-                    </div>
-                    <label class="toggle">
-                        <input type="checkbox" id="logo-padding" checked> Logo Padding
-                    </label>
-                    <div style="margin-top: 1rem;">
-                        <label>Or use Emoji:</label>
-                        <input type="text" class="input-field" id="emoji-input" placeholder="🚀" maxlength="2">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Frame & Label -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <span class="section-title">Frame & Label</span>
-                    <div class="section-rule"></div>
-                </div>
-                <div class="section-content">
-                    <div>
-                        <label>Frame Style:</label>
-                        <select class="input-field" id="frame-style">
-                            <option value="none">None</option>
-                            <option value="border">Simple Border</option>
-                            <option value="rounded">Rounded Card</option>
-                            <option value="badge">Badge</option>
-                            <option value="banner">Banner Bottom</option>
-                        </select>
-                    </div>
-                    <input type="text" class="input-field" id="label-text" placeholder="Scan Me">
-                    <div class="slider-container">
-                        <label>Label Size: <span id="label-size-value">16</span>px</label>
-                        <input type="range" class="slider" id="label-size-slider" min="12" max="32" value="16">
-                    </div>
-                    <div class="color-picker">
-                        <label>Label Color:</label>
-                        <input type="color" class="color-input" id="label-color" value="#000000">
-                        <input type="text" class="hex-input" id="label-hex" value="#000000">
-                    </div>
-                    <div>
-                        <label>Label Position:</label>
-                        <select class="input-field" id="label-position">
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
-                    </div>
-                    <div class="color-picker">
-                        <label>Frame Background:</label>
-                        <input type="color" class="color-input" id="frame-bg-color" value="#ffffff">
-                        <input type="text" class="hex-input" id="frame-bg-hex" value="#ffffff">
-                    </div>
-                </div>
-            </div>
-
-            <!-- History & Presets -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <span class="section-title">History & Presets</span>
-                    <div class="section-rule"></div>
-                </div>
-                <div class="section-content">
-                    <input type="text" class="input-field" id="preset-name" placeholder="Preset name">
-                    <button class="btn" onclick="savePreset()">Save Preset</button>
-                    <div class="history-strip" id="history-strip"></div>
-                </div>
-            </div>
+        <div class="control">
+          <label for="text-input">QR payload</label>
+          <textarea id="text-input" rows="3">https://example.com</textarea>
         </div>
+      </section>
 
-        <div class="main-panel">
-            <div class="preview-container">
-                <div id="preview-wrapper" class="loading-shimmer">
-                    <canvas id="qr-canvas" class="preview-canvas"></canvas>
-                </div>
-                <div id="scannability-indicator" class="scannability-indicator scannability-good">
-                    ✓ Likely Scannable
-                </div>
-                <div style="margin-top: 1rem;">
-                    <label class="toggle">
-                        <input type="checkbox" id="phone-preview"> Phone Mockup
-                    </label>
-                </div>
-                <div class="export-options">
-                    <button class="btn" onclick="downloadPNG()">PNG</button>
-                    <button class="btn" onclick="downloadPNG2x()">PNG @2x</button>
-                    <button class="btn" onclick="downloadPNG3x()">PNG @3x</button>
-                    <button class="btn" onclick="downloadSVG()">SVG</button>
-                    <button class="btn secondary" onclick="copyToClipboard()">Copy</button>
-                </div>
-            </div>
+      <section class="panel">
+        <h2>SIZE & ERROR</h2>
+        <div class="control slider-row">
+          <label for="size-slider">Size <span id="size-badge">256</span>px</label>
+          <input id="size-slider" type="range" min="128" max="1024" value="256" />
         </div>
-    </div>
+        <div class="radio-group" id="error-group">
+          <label class="pill active"><input type="radio" name="correction" value="L" checked hidden />L</label>
+          <label class="pill"><input type="radio" name="correction" value="M" hidden />M</label>
+          <label class="pill"><input type="radio" name="correction" value="Q" hidden />Q</label>
+          <label class="pill"><input type="radio" name="correction" value="H" hidden />H</label>
+        </div>
+      </section>
 
-    <script>
-        // Global variables
-        let qrCode = null;
-        let debounceTimer = null;
-        let logoImage = null;
-        let history = JSON.parse(localStorage.getItem('qrHistory') || '[]');
-        let presets = JSON.parse(localStorage.getItem('qrPresets') || '{}');
+      <section class="panel">
+        <h2>COLOURS</h2>
+        <div class="small-row">
+          <div class="input-group">
+            <label for="fg-color">Foreground</label>
+            <div class="small-row">
+              <input id="fg-color" type="color" value="#111111" />
+              <input id="fg-hex" type="text" value="#111111" />
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="bg-color">Background</label>
+            <div class="small-row">
+              <input id="bg-color" type="color" value="#ffffff" />
+              <input id="bg-hex" type="text" value="#ffffff" />
+            </div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <input id="transparent-bg" type="checkbox" />
+          <label for="transparent-bg">Transparent background</label>
+        </div>
+      </section>
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            generateQR();
-            loadHistory();
-        });
+      <section class="panel">
+        <h2>DOT STYLE</h2>
+        <div class="icon-grid" id="dot-style-grid">
+          <button class="icon-btn active" type="button" data-style="square" title="Square"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-style="round" title="Round"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="7" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-style="dots" title="Dots"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3" fill="currentColor"/><circle cx="17" cy="7" r="3" fill="currentColor"/><circle cx="7" cy="17" r="3" fill="currentColor"/><circle cx="17" cy="17" r="3" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-style="diamond" title="Diamond"><svg width="20" height="20" viewBox="0 0 24 24"><polygon points="12,4 20,12 12,20 4,12" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-style="star" title="Star"><svg width="20" height="20" viewBox="0 0 24 24"><polygon points="12,3 14.9,9.7 22,10.5 16.5,15.1 17.8,22 12,18.3 6.2,22 7.5,15.1 2,10.5 9.1,9.7" fill="currentColor"/></svg></button>
+        </div>
+      </section>
 
-        function setupEventListeners() {
-            // Tab switching
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', switchTab);
-            });
+      <section class="panel">
+        <h2>OVERLAY PATTERN</h2>
+        <div class="control">
+          <label for="pattern-select">Pattern</label>
+          <select id="pattern-select">
+            <option value="none">None</option>
+            <option value="blossom">Cherry Blossom</option>
+            <option value="waves">Ocean Waves</option>
+            <option value="aurora">Aurora</option>
+            <option value="hexagons">Hexagons</option>
+            <option value="stardust">Stardust</option>
+          </select>
+        </div>
+        <div class="control slider-row">
+          <label for="pattern-opacity">Opacity <span id="pattern-badge">25%</span></label>
+          <input id="pattern-opacity" type="range" min="0" max="50" value="25" />
+        </div>
+        <div class="warning-text" id="pattern-warning" style="display:none;">⚠ May affect scanning</div>
+      </section>
 
-            // Input changes
-            document.querySelectorAll('.input-field, .slider, input[type="radio"], input[type="checkbox"], select').forEach(el => {
-                el.addEventListener('input', debounceGenerate);
-                el.addEventListener('change', debounceGenerate);
-            });
+      <section class="panel">
+        <h2>CENTER LOGO</h2>
+        <div class="control">
+          <label for="logo-upload">Upload logo</label>
+          <input id="logo-upload" type="file" accept="image/*" />
+        </div>
+        <div class="control">
+          <label for="emoji-input">Use emoji instead</label>
+          <input id="emoji-input" type="text" placeholder="🚀" maxlength="2" />
+        </div>
+        <div class="control slider-row">
+          <label for="logo-size-slider">Logo size <span id="logo-size-badge">20%</span></label>
+          <input id="logo-size-slider" type="range" min="10" max="30" value="20" />
+        </div>
+        <div class="icon-grid" id="logo-shape-grid">
+          <button class="icon-btn active" type="button" data-logo-shape="circle" title="Circle"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-logo-shape="square" title="Square"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg></button>
+          <button class="icon-btn" type="button" data-logo-shape="rounded" title="Rounded"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="5" fill="currentColor"/></svg></button>
+        </div>
+        <div class="small-row">
+          <div class="input-group">
+            <label for="logo-border-color">Logo border</label>
+            <div class="small-row">
+              <input id="logo-border-color" type="color" value="#ffffff" />
+              <input id="logo-border-hex" type="text" value="#ffffff" />
+            </div>
+          </div>
+          <div class="toggle-row" style="flex:1;">
+            <input id="logo-border-toggle" type="checkbox" checked />
+            <label for="logo-border-toggle">Show border</label>
+          </div>
+        </div>
+      </section>
 
-            // Color inputs
-            document.querySelectorAll('.color-input').forEach(colorInput => {
-                colorInput.addEventListener('input', function() {
-                    const hexInput = this.nextElementSibling;
-                    hexInput.value = this.value;
-                    debounceGenerate();
-                });
-            });
+      <section class="panel">
+        <h2>FRAME & LABEL</h2>
+        <div class="pill-group" id="frame-pills">
+          <div class="pill active" data-frame="none">None</div>
+          <div class="pill" data-frame="border">Border</div>
+          <div class="pill" data-frame="card">Card</div>
+          <div class="pill" data-frame="badge">Badge</div>
+        </div>
+        <div class="control">
+          <label for="cta-input">CTA text</label>
+          <input id="cta-input" type="text" placeholder="Scan Me!" value="Scan Me!" />
+        </div>
+        <div class="control slider-row">
+          <label for="label-size-slider">Label size <span id="label-size-badge">16</span>px</label>
+          <input id="label-size-slider" type="range" min="12" max="26" value="16" />
+        </div>
+        <div class="radio-group" id="label-position-group">
+          <label class="pill active"><input type="radio" name="label-position" value="top" checked hidden />Top</label>
+          <label class="pill"><input type="radio" name="label-position" value="bottom" hidden />Bottom</label>
+        </div>
+      </section>
 
-            document.querySelectorAll('.hex-input').forEach(hexInput => {
-                hexInput.addEventListener('input', function() {
-                    const colorInput = this.previousElementSibling;
-                    if (/^#[0-9A-F]{6}$/i.test(this.value)) {
-                        colorInput.value = this.value;
-                        debounceGenerate();
-                    }
-                });
-            });
+      <section class="panel">
+        <h2>EXPORT</h2>
+        <div class="export-row">
+          <button id="download-png">Download PNG</button>
+          <button id="download-png-2x">Download PNG @2x</button>
+          <button id="copy-clipboard">Copy to Clipboard</button>
+        </div>
+      </section>
+    </aside>
 
-            // Shape selectors
-            document.querySelectorAll('.shape-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.parentElement.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    debounceGenerate();
-                });
-            });
+    <main id="preview-pane">
+      <div id="preview-card">
+        <canvas id="final-canvas" width="480" height="480" aria-label="QR preview"></canvas>
+        <div class="status-row">
+          <span class="status-pill active" id="scannability-pill"><span class="status-dot"></span><span id="scannability-text">Scannable</span></span>
+          <span class="badge-pill" id="content-badge">URL</span>
+        </div>
+        <button id="generate-btn">Generate QR</button>
+      </div>
+      <div id="qr-output"></div>
+    </main>
+  </div>
 
-            // Pattern selectors
-            document.querySelectorAll('.pattern-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.parentElement.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    debounceGenerate();
-                });
-            });
+  <script>
+    const defaultURL = 'https://example.com';
+    const state = {
+      text: defaultURL,
+      type: 'URL',
+      size: 256,
+      error: 'H',
+      fgColor: '#111111',
+      bgColor: '#ffffff',
+      transparentBg: false,
+      dotStyle: 'square',
+      pattern: 'none',
+      patternOpacity: 25,
+      logoImage: null,
+      emoji: '',
+      logoSize: 20,
+      logoShape: 'circle',
+      logoBorder: true,
+      logoBorderColor: '#ffffff',
+      frameStyle: 'none',
+      labelText: 'Scan Me!',
+      labelSize: 16,
+      labelPosition: 'top'
+    };
+    let debounceTimer = null;
 
-            // Logo upload
-            document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
+    const elements = {
+      textInput: document.getElementById('text-input'),
+      sizeSlider: document.getElementById('size-slider'),
+      sizeBadge: document.getElementById('size-badge'),
+      fgColor: document.getElementById('fg-color'),
+      fgHex: document.getElementById('fg-hex'),
+      bgColor: document.getElementById('bg-color'),
+      bgHex: document.getElementById('bg-hex'),
+      transparentBg: document.getElementById('transparent-bg'),
+      errorRadios: document.querySelectorAll('input[name="correction"]'),
+      dotStyleButtons: document.querySelectorAll('#dot-style-grid .icon-btn'),
+      patternSelect: document.getElementById('pattern-select'),
+      patternOpacity: document.getElementById('pattern-opacity'),
+      patternBadge: document.getElementById('pattern-badge'),
+      patternWarning: document.getElementById('pattern-warning'),
+      logoUpload: document.getElementById('logo-upload'),
+      emojiInput: document.getElementById('emoji-input'),
+      logoSizeSlider: document.getElementById('logo-size-slider'),
+      logoSizeBadge: document.getElementById('logo-size-badge'),
+      logoShapeButtons: document.querySelectorAll('#logo-shape-grid .icon-btn'),
+      logoBorderToggle: document.getElementById('logo-border-toggle'),
+      logoBorderColor: document.getElementById('logo-border-color'),
+      logoBorderHex: document.getElementById('logo-border-hex'),
+      framePills: document.querySelectorAll('#frame-pills .pill'),
+      ctaInput: document.getElementById('cta-input'),
+      labelSizeSlider: document.getElementById('label-size-slider'),
+      labelSizeBadge: document.getElementById('label-size-badge'),
+      labelPositionRadios: document.querySelectorAll('input[name="label-position"]'),
+      downloadPNG: document.getElementById('download-png'),
+      downloadPNG2x: document.getElementById('download-png-2x'),
+      copyClipboard: document.getElementById('copy-clipboard'),
+      generateBtn: document.getElementById('generate-btn'),
+      scannabilityText: document.getElementById('scannability-text'),
+      scannabilityPill: document.getElementById('scannability-pill'),
+      contentBadge: document.getElementById('content-badge'),
+      typePills: document.querySelectorAll('#type-pills .pill'),
+      finalCanvas: document.getElementById('final-canvas'),
+      qrOutput: document.getElementById('qr-output')
+    };
 
-            // Slider values
-            document.getElementById('size-slider').addEventListener('input', function() {
-                document.getElementById('size-value').textContent = this.value;
-            });
+    function init() {
+      if (typeof QRCode === 'undefined') {
+        setTimeout(init, 100);
+        return;
+      }
+      elements.textInput.value = defaultURL;
+      elements.sizeBadge.textContent = `${state.size}`;
+      elements.patternBadge.textContent = `${state.patternOpacity}%`;
+      elements.logoSizeBadge.textContent = `${state.logoSize}%`;
+      elements.labelSizeBadge.textContent = `${state.labelSize}`;
+      elements.contentBadge.textContent = state.type;
+      attachListeners();
+      generateQR();
+    }
 
-            document.getElementById('logo-size-slider').addEventListener('input', function() {
-                document.getElementById('logo-size-value').textContent = this.value;
-            });
+    function attachListeners() {
+      elements.typePills.forEach(pill => pill.addEventListener('click', onTypeSelect));
+      elements.sizeSlider.addEventListener('input', onSizeChange);
+      elements.fgColor.addEventListener('input', syncColorInput);
+      elements.fgHex.addEventListener('input', syncHexInput);
+      elements.bgColor.addEventListener('input', syncColorInput);
+      elements.bgHex.addEventListener('input', syncHexInput);
+      elements.transparentBg.addEventListener('change', onAnyChange);
+      elements.errorRadios.forEach(r => r.addEventListener('change', onAnyChange));
+      elements.dotStyleButtons.forEach(btn => btn.addEventListener('click', onDotStyleSelect));
+      elements.patternSelect.addEventListener('change', onPatternChange);
+      elements.patternOpacity.addEventListener('input', onPatternOpacityChange);
+      elements.logoUpload.addEventListener('change', onLogoUpload);
+      elements.emojiInput.addEventListener('input', onAnyChange);
+      elements.logoSizeSlider.addEventListener('input', onLogoSizeChange);
+      elements.logoShapeButtons.forEach(btn => btn.addEventListener('click', onLogoShapeSelect));
+      elements.logoBorderToggle.addEventListener('change', onAnyChange);
+      elements.logoBorderColor.addEventListener('input', syncBorderColorInput);
+      elements.logoBorderHex.addEventListener('input', syncBorderHexInput);
+      elements.framePills.forEach(pill => pill.addEventListener('click', onFrameSelect));
+      elements.ctaInput.addEventListener('input', onAnyChange);
+      elements.labelSizeSlider.addEventListener('input', onLabelSizeChange);
+      elements.labelPositionRadios.forEach(r => r.addEventListener('change', onAnyChange));
+      elements.generateBtn.addEventListener('click', generateQR);
+      elements.downloadPNG.addEventListener('click', () => downloadPNG(1));
+      elements.downloadPNG2x.addEventListener('click', () => downloadPNG(2));
+      elements.copyClipboard.addEventListener('click', copyToClipboard);
+      elements.textInput.addEventListener('input', onAnyChange);
+      elements.textInput.addEventListener('change', onAnyChange);
+    }
 
-            document.getElementById('border-thickness-slider').addEventListener('input', function() {
-                document.getElementById('border-thickness-value').textContent = this.value;
-            });
+    function onTypeSelect(event) {
+      elements.typePills.forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      state.type = event.currentTarget.dataset.type;
+      elements.contentBadge.textContent = state.type;
+      switch (state.type) {
+        case 'URL': elements.textInput.value = defaultURL; break;
+        case 'Text': elements.textInput.value = 'Hello from QR Gen'; break;
+        case 'WiFi': elements.textInput.value = 'WIFI:S:MyNetwork;T:WPA;P:SuperSecret;;'; break;
+        case 'vCard': elements.textInput.value = 'BEGIN:VCARD\nVERSION:3.0\nN:Doe;Jane\nFN:Jane Doe\nEMAIL:jane@example.com\nEND:VCARD'; break;
+        case 'Email': elements.textInput.value = 'mailto:hello@example.com?subject=Hello&body=Welcome%20to%20QR%20Gen'; break;
+      }
+      triggerGenerate();
+    }
 
-            document.getElementById('label-size-slider').addEventListener('input', function() {
-                document.getElementById('label-size-value').textContent = this.value;
-            });
+    function onSizeChange(event) {
+      state.size = Number(event.target.value);
+      elements.sizeBadge.textContent = state.size;
+      triggerGenerate();
+    }
+
+    function syncColorInput(event) {
+      const input = event.target;
+      if (input.id === 'fg-color') {
+        elements.fgHex.value = input.value;
+        state.fgColor = input.value;
+      } else {
+        elements.bgHex.value = input.value;
+        state.bgColor = input.value;
+      }
+      triggerGenerate();
+    }
+
+    function syncHexInput(event) {
+      const input = event.target;
+      if (!/^#[0-9A-Fa-f]{6}$/.test(input.value)) return;
+      if (input.id === 'fg-hex') {
+        elements.fgColor.value = input.value;
+        state.fgColor = input.value;
+      } else {
+        elements.bgColor.value = input.value;
+        state.bgColor = input.value;
+      }
+      triggerGenerate();
+    }
+
+    function onAnyChange() {
+      triggerGenerate();
+    }
+
+    function onDotStyleSelect(event) {
+      elements.dotStyleButtons.forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      state.dotStyle = event.currentTarget.dataset.style;
+      triggerGenerate();
+    }
+
+    function onPatternChange() {
+      state.pattern = elements.patternSelect.value;
+      triggerGenerate();
+    }
+
+    function onPatternOpacityChange(event) {
+      state.patternOpacity = Number(event.target.value);
+      elements.patternBadge.textContent = `${state.patternOpacity}%`;
+      elements.patternWarning.style.display = state.patternOpacity > 35 ? 'flex' : 'none';
+      triggerGenerate();
+    }
+
+    function onLogoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          state.logoImage = img;
+          triggerGenerate();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function onLogoSizeChange(event) {
+      state.logoSize = Number(event.target.value);
+      elements.logoSizeBadge.textContent = `${state.logoSize}%`;
+      triggerGenerate();
+    }
+
+    function onLogoShapeSelect(event) {
+      elements.logoShapeButtons.forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      state.logoShape = event.currentTarget.dataset.logoShape;
+      triggerGenerate();
+    }
+
+    function syncBorderColorInput(event) {
+      elements.logoBorderHex.value = event.target.value;
+      state.logoBorderColor = event.target.value;
+      triggerGenerate();
+    }
+
+    function syncBorderHexInput(event) {
+      if (!/^#[0-9A-Fa-f]{6}$/.test(event.target.value)) return;
+      elements.logoBorderColor.value = event.target.value;
+      state.logoBorderColor = event.target.value;
+      triggerGenerate();
+    }
+
+    function onFrameSelect(event) {
+      elements.framePills.forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      state.frameStyle = event.currentTarget.dataset.frame;
+      triggerGenerate();
+    }
+
+    function onLabelSizeChange(event) {
+      state.labelSize = Number(event.target.value);
+      elements.labelSizeBadge.textContent = `${state.labelSize}`;
+      triggerGenerate();
+    }
+
+    function triggerGenerate() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(generateQR, 400);
+    }
+
+    function setStateFromInputs() {
+      state.text = elements.textInput.value || defaultURL;
+      state.transparentBg = elements.transparentBg.checked;
+      state.error = [...elements.errorRadios].find(r => r.checked).value;
+      state.emoji = elements.emojiInput.value.trim();
+      state.logoBorder = elements.logoBorderToggle.checked;
+      state.labelText = elements.ctaInput.value.trim() || 'Scan Me!';
+      state.labelPosition = [...elements.labelPositionRadios].find(r => r.checked).value;
+    }
+
+    function generateQR() {
+      setStateFromInputs();
+      elements.contentBadge.textContent = state.type;
+      elements.scannabilityText.textContent = 'Scannable';
+      elements.scannabilityPill.className = 'status-pill active';
+
+      const qrOutput = elements.qrOutput;
+      qrOutput.innerHTML = '';
+      new QRCode(qrOutput, {
+        text: state.text,
+        width: state.size,
+        height: state.size,
+        colorDark: state.fgColor,
+        colorLight: state.transparentBg ? 'rgba(255,255,255,0)' : state.bgColor,
+        correctLevel: QRCode.CorrectLevel[state.error]
+      });
+
+      requestAnimationFrame(() => composeCanvas());
+    }
+
+    function composeCanvas() {
+      const tempElement = elements.qrOutput.querySelector('img, canvas');
+      if (!tempElement) {
+        return setTimeout(composeCanvas, 50);
+      }
+      const canvas = elements.finalCanvas;
+      canvas.width = state.size;
+      canvas.height = state.size;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (state.transparentBg) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = state.bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (tempElement.tagName === 'IMG') {
+        if (!tempElement.complete) {
+          tempElement.onload = composeCanvas;
+          return;
         }
+        ctx.drawImage(tempElement, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.drawImage(tempElement, 0, 0, canvas.width, canvas.height);
+      }
 
-        function switchTab() {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            updateInputFields();
-            generateQR();
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      drawOverlay(ctx, canvas.width, state.pattern);
+      ctx.restore();
+
+      drawCenterLogo(ctx, canvas.width);
+      drawFrameAndLabel(ctx, canvas.width);
+      evaluateScannability();
+    }
+
+    function drawOverlay(ctx, size, pattern) {
+      if (pattern === 'none') return;
+      const opacity = state.patternOpacity / 100;
+      ctx.globalAlpha = opacity;
+      if (pattern === 'blossom') {
+        for (let i = 0; i < 16; i++) {
+          const x = Math.random() * size;
+          const y = Math.random() * size;
+          const radius = 6 + Math.random() * 8;
+          const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+          gradient.addColorStop(0, 'rgba(236,72,153,0.75)');
+          gradient.addColorStop(1, 'rgba(236,72,153,0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
         }
-
-        function updateInputFields() {
-            const activeTab = document.querySelector('.tab.active').dataset.type;
-            const inputContainer = document.getElementById('input-fields');
-            
-            let fields = '';
-            switch (activeTab) {
-                case 'url':
-                    fields = '<input type="text" class="input-field" id="url-input" placeholder="https://example.com" value="https://example.com">';
-                    break;
-                case 'text':
-                    fields = '<textarea class="input-field" id="text-input" placeholder="Enter your text here" rows="3">Hello World</textarea>';
-                    break;
-                case 'email':
-                    fields = `
-                        <input type="email" class="input-field" id="email-to" placeholder="to@example.com" value="to@example.com">
-                        <input type="text" class="input-field" id="email-subject" placeholder="Subject" value="Hello">
-                        <textarea class="input-field" id="email-body" placeholder="Message body" rows="3">This is a test email.</textarea>
-                    `;
-                    break;
-                case 'sms':
-                    fields = `
-                        <input type="tel" class="input-field" id="sms-number" placeholder="+1234567890" value="+1234567890">
-                        <textarea class="input-field" id="sms-message" placeholder="Your message" rows="3">Hello from QR!</textarea>
-                    `;
-                    break;
-                case 'phone':
-                    fields = '<input type="tel" class="input-field" id="phone-input" placeholder="+1234567890" value="+1234567890">';
-                    break;
-                case 'wifi':
-                    fields = `
-                        <input type="text" class="input-field" id="wifi-ssid" placeholder="Network Name" value="MyWiFi">
-                        <input type="password" class="input-field" id="wifi-password" placeholder="Password" value="password123">
-                        <select class="input-field" id="wifi-encryption">
-                            <option value="WPA">WPA/WPA2</option>
-                            <option value="WEP">WEP</option>
-                            <option value="nopass">No Password</option>
-                        </select>
-                    `;
-                    break;
-                case 'vcard':
-                    fields = `
-                        <input type="text" class="input-field" id="vcard-name" placeholder="Full Name" value="John Doe">
-                        <input type="tel" class="input-field" id="vcard-phone" placeholder="Phone" value="+1234567890">
-                        <input type="email" class="input-field" id="vcard-email" placeholder="Email" value="john@example.com">
-                        <input type="text" class="input-field" id="vcard-org" placeholder="Organization" value="Company Inc">
-                        <input type="url" class="input-field" id="vcard-url" placeholder="Website" value="https://example.com">
-                    `;
-                    break;
-                case 'social':
-                    fields = `
-                        <select class="input-field" id="social-platform">
-                            <option value="instagram">Instagram</option>
-                            <option value="twitter">Twitter</option>
-                            <option value="linkedin">LinkedIn</option>
-                        </select>
-                        <input type="text" class="input-field" id="social-username" placeholder="username" value="johndoe">
-                    `;
-                    break;
-            }
-            
-            inputContainer.innerHTML = fields;
-            // Re-attach event listeners
-            document.querySelectorAll('#input-fields .input-field, #input-fields select').forEach(el => {
-                el.addEventListener('input', debounceGenerate);
-                el.addEventListener('change', debounceGenerate);
-            });
+      } else if (pattern === 'waves') {
+        ctx.strokeStyle = 'rgba(6,182,212,0.35)';
+        ctx.lineWidth = 3;
+        for (let y = 20; y < size; y += 40) {
+          ctx.beginPath();
+          for (let x = 0; x <= size; x += 8) {
+            ctx.lineTo(x, y + Math.sin((x + y) * 0.05) * 10);
+          }
+          ctx.stroke();
         }
-
-        function debounceGenerate() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(generateQR, 300);
+      } else if (pattern === 'aurora') {
+        const grad = ctx.createLinearGradient(0, 0, size, size);
+        grad.addColorStop(0, 'rgba(124,58,237,0.35)');
+        grad.addColorStop(0.5, 'rgba(6,182,212,0.35)');
+        grad.addColorStop(1, 'rgba(236,72,153,0.35)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+      } else if (pattern === 'hexagons') {
+        ctx.strokeStyle = 'rgba(124,58,237,0.5)';
+        ctx.lineWidth = 1;
+        const step = 24;
+        for (let y = -step; y < size + step; y += step * 0.85) {
+          for (let x = -step; x < size + step; x += step * 1.75) {
+            drawHex(ctx, x + (Math.floor(y / step) % 2 ? step * 0.9 : 0), y, step / 2);
+          }
         }
-
-        function getQRData() {
-            const activeTab = document.querySelector('.tab.active').dataset.type;
-            
-            switch (activeTab) {
-                case 'url':
-                    return document.getElementById('url-input').value;
-                case 'text':
-                    return document.getElementById('text-input').value;
-                case 'email':
-                    const to = document.getElementById('email-to').value;
-                    const subject = document.getElementById('email-subject').value;
-                    const body = document.getElementById('email-body').value;
-                    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                case 'sms':
-                    const number = document.getElementById('sms-number').value;
-                    const message = document.getElementById('sms-message').value;
-                    return `sms:${number}?body=${encodeURIComponent(message)}`;
-                case 'phone':
-                    return `tel:${document.getElementById('phone-input').value}`;
-                case 'wifi':
-                    const ssid = document.getElementById('wifi-ssid').value;
-                    const password = document.getElementById('wifi-password').value;
-                    const encryption = document.getElementById('wifi-encryption').value;
-                    return `WIFI:T:${encryption};S:${ssid};P:${password};;`;
-                case 'vcard':
-                    const name = document.getElementById('vcard-name').value;
-                    const phone = document.getElementById('vcard-phone').value;
-                    const email = document.getElementById('vcard-email').value;
-                    const org = document.getElementById('vcard-org').value;
-                    const url = document.getElementById('vcard-url').value;
-                    return `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\nTEL:${phone}\nEMAIL:${email}\nORG:${org}\nURL:${url}\nEND:VCARD`;
-                case 'social':
-                    const platform = document.getElementById('social-platform').value;
-                    const username = document.getElementById('social-username').value;
-                    const urls = {
-                        instagram: `https://instagram.com/${username}`,
-                        twitter: `https://twitter.com/${username}`,
-                        linkedin: `https://linkedin.com/in/${username}`
-                    };
-                    return urls[platform];
-                default:
-                    return 'https://example.com';
-            }
+      } else if (pattern === 'stardust') {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        for (let i = 0; i < 40; i++) {
+          const x = Math.random() * size;
+          const y = Math.random() * size;
+          ctx.fillRect(x, y, 2, 2);
+          ctx.fillRect(x + 3, y - 1, 1, 4);
+          ctx.fillRect(x - 1, y + 3, 4, 1);
         }
+      }
+    }
 
-        function generateQR() {
-            const data = getQRData();
-            const canvas = document.getElementById('qr-canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Get settings
-            const size = parseInt(document.getElementById('size-slider').value);
-            const fgColor = document.getElementById('fg-color').value;
-            const bgColor = document.getElementById('bg-color').value;
-            const transparentBg = document.getElementById('transparent-bg').checked;
-            const errorCorrection = document.querySelector('input[name="error-correction"]:checked').value;
-            const dotShape = document.querySelector('.shape-btn.active[data-shape]').dataset.shape;
-            const pattern = document.querySelector('.pattern-btn.active').dataset.pattern;
-            
-            // Set canvas size
-            canvas.width = size;
-            canvas.height = size;
-            
-            // Generate QR with qrcode.js
-            if (qrCode) {
-                qrCode.clear();
-            }
-            
-            const correctionLevel = { L: 1, M: 0, Q: 3, H: 2 }[errorCorrection];
-            
-            qrCode = new QRCode(document.createElement('div'), {
-                text: data,
-                width: size,
-                height: size,
-                colorDark: fgColor,
-                colorLight: transparentBg ? 'rgba(0,0,0,0)' : bgColor,
-                correctLevel: correctionLevel
-            });
-            
-            // Wait for QR to generate, then draw on canvas
-            setTimeout(() => {
-                const qrImg = qrCode._oDrawing._elImage;
-                if (qrImg) {
-                    ctx.drawImage(qrImg, 0, 0, size, size);
-                    
-                    // Apply dot shape
-                    applyDotShape(ctx, size, dotShape);
-                    
-                    // Apply pattern overlay
-                    applyPattern(ctx, size, pattern);
-                    
-                    // Add logo
-                    addLogo(ctx, size);
-                    
-                    // Add frame and label
-                    addFrameAndLabel(ctx, size);
-                    
-                    // Update scannability
-                    updateScannability();
-                    
-                    // Remove loading shimmer
-                    document.getElementById('preview-wrapper').classList.remove('loading-shimmer');
-                    
-                    // Add to history
-                    addToHistory();
-                }
-            }, 100);
-            
-            // Add loading shimmer
-            document.getElementById('preview-wrapper').classList.add('loading-shimmer');
+    function drawHex(ctx, x, y, radius) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const px = x + radius * Math.cos(angle);
+        const py = y + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    function drawCenterLogo(ctx, size) {
+      const center = size / 2;
+      const logoSize = Math.floor(size * (state.logoSize / 100));
+      if (!logoSize) return;
+      if (!state.logoImage && !state.emoji) return;
+      const padding = 8;
+      const total = logoSize + padding * 2;
+      ctx.save();
+      ctx.beginPath();
+      if (state.logoShape === 'circle') {
+        ctx.arc(center, center, total / 2, 0, Math.PI * 2);
+      } else if (state.logoShape === 'rounded') {
+        roundRect(ctx, center - total / 2, center - total / 2, total, total, 14);
+      } else {
+        ctx.rect(center - total / 2, center - total / 2, total, total);
+      }
+      ctx.fillStyle = state.logoBorder ? state.logoBorderColor : 'rgba(255,255,255,0.9)';
+      ctx.fill();
+      ctx.clip();
+
+      if (state.logoImage) {
+        ctx.drawImage(state.logoImage, center - logoSize / 2, center - logoSize / 2, logoSize, logoSize);
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `${logoSize}px serif`;
+        ctx.fillText(state.emoji, center, center);
+      }
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function drawFrameAndLabel(ctx, size) {
+      if (state.frameStyle === 'none' && !state.labelText) return;
+      const padding = 14;
+      const labelPadding = 16;
+      const bg = state.frameStyle === 'card' ? 'rgba(255,255,255,0.08)' : 'transparent';
+      if (state.frameStyle !== 'none') {
+        ctx.save();
+        if (state.frameStyle === 'border') {
+          ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2);
+        } else if (state.frameStyle === 'card') {
+          ctx.fillStyle = bg;
+          roundRect(ctx, padding, padding, size - padding * 2, size - padding * 2, 24);
+          ctx.fill();
+        } else if (state.frameStyle === 'badge') {
+          ctx.fillStyle = 'rgba(124,58,237,0.18)';
+          const radius = size * 0.12;
+          ctx.beginPath();
+          ctx.arc(size / 2, size / 2, radius + 12, 0, Math.PI * 2);
+          ctx.fill();
         }
+        ctx.restore();
+      }
+      if (state.labelText) {
+        ctx.save();
+        ctx.font = `${state.labelSize}px 'Syne', sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const y = state.labelPosition === 'top' ? labelPadding : size - labelPadding;
+        ctx.fillText(state.labelText, size / 2, y);
+        ctx.restore();
+      }
+    }
 
-        function applyDotShape(ctx, size, shape) {
-            // This is a simplified implementation. In a real app, you'd modify the QR code generation
-            // For now, we'll just leave the default square dots
-        }
+    function evaluateScannability() {
+      const risk = (state.pattern !== 'none' ? 1 : 0) + (state.logoSize > 25 ? 1 : 0) + (state.emoji ? 1 : 0);
+      if (risk >= 2) {
+        elements.scannabilityText.textContent = 'Risk of scanning';
+        elements.scannabilityPill.className = 'status-pill risk';
+      } else {
+        elements.scannabilityText.textContent = 'Scannable';
+        elements.scannabilityPill.className = 'status-pill active';
+      }
+    }
 
-        function applyPattern(ctx, size, pattern) {
-            ctx.globalAlpha = 0.3; // Semi-transparent
-            
-            switch (pattern) {
-                case 'blossom':
-                    // Cherry blossoms
-                    for (let i = 0; i < 20; i++) {
-                        const x = Math.random() * size;
-                        const y = Math.random() * size;
-                        ctx.beginPath();
-                        ctx.arc(x, y, 2, 0, Math.PI * 2);
-                        ctx.fillStyle = '#ff69b4';
-                        ctx.fill();
-                    }
-                    break;
-                case 'waves':
-                    // Ocean waves
-                    ctx.strokeStyle = '#0ea5e9';
-                    ctx.lineWidth = 2;
-                    for (let y = 0; y < size; y += 20) {
-                        ctx.beginPath();
-                        ctx.moveTo(0, y);
-                        for (let x = 0; x < size; x += 10) {
-                            ctx.lineTo(x, y + Math.sin(x * 0.1) * 5);
-                        }
-                        ctx.stroke();
-                    }
-                    break;
-                case 'aurora':
-                    // Aurora gradient
-                    const gradient = ctx.createLinearGradient(0, 0, size, size);
-                    gradient.addColorStop(0, 'rgba(124, 58, 237, 0.5)');
-                    gradient.addColorStop(0.5, 'rgba(14, 165, 233, 0.5)');
-                    gradient.addColorStop(1, 'rgba(236, 72, 153, 0.5)');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, size, size);
-                    break;
-                case 'hex':
-                    // Hexagons
-                    ctx.strokeStyle = '#7c3aed';
-                    ctx.lineWidth = 1;
-                    const hexSize = 15;
-                    for (let x = 0; x < size; x += hexSize * 1.5) {
-                        for (let y = 0; y < size; y += hexSize * Math.sqrt(3)) {
-                            drawHexagon(ctx, x, y, hexSize);
-                        }
-                    }
-                    break;
-                case 'stardust':
-                    // Stardust
-                    for (let i = 0; i < 50; i++) {
-                        const x = Math.random() * size;
-                        const y = Math.random() * size;
-                        ctx.beginPath();
-                        ctx.arc(x, y, 1, 0, Math.PI * 2);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fill();
-                    }
-                    break;
-            }
-            
-            ctx.globalAlpha = 1;
-        }
+    function downloadPNG(scale = 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = state.size * scale;
+      canvas.height = state.size * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(elements.finalCanvas, 0, 0);
+      const link = document.createElement('a');
+      link.download = `qr-gen${scale === 1 ? '' : '@' + scale + 'x'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
 
-        function drawHexagon(ctx, x, y, size) {
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (Math.PI / 3) * i;
-                const hx = x + size * Math.cos(angle);
-                const hy = y + size * Math.sin(angle);
-                if (i === 0) ctx.moveTo(hx, hy);
-                else ctx.lineTo(hx, hy);
-            }
-            ctx.closePath();
-            ctx.stroke();
-        }
+    async function copyToClipboard() {
+      try {
+        const blob = await new Promise(resolve => elements.finalCanvas.toBlob(resolve));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      } catch (error) {
+        console.warn('Clipboard copy failed', error);
+      }
+    }
 
-        function addLogo(ctx, size) {
-            const logoSizePercent = parseInt(document.getElementById('logo-size-slider').value);
-            const logoSize = (size * logoSizePercent) / 100;
-            const centerX = size / 2;
-            const centerY = size / 2;
-            
-            if (logoImage) {
-                const logoShape = document.querySelector('.shape-btn.active[data-logo-shape]').dataset.logoShape;
-                const borderColor = document.getElementById('logo-border-color').value;
-                const borderThickness = parseInt(document.getElementById('border-thickness-slider').value);
-                const padding = document.getElementById('logo-padding').checked ? logoSize * 0.1 : 0;
-                
-                ctx.save();
-                ctx.beginPath();
-                
-                if (logoShape === 'circle') {
-                    ctx.arc(centerX, centerY, logoSize / 2 + padding, 0, Math.PI * 2);
-                } else if (logoShape === 'rounded') {
-                    const radius = logoSize / 8;
-                    ctx.roundRect(centerX - logoSize / 2 - padding, centerY - logoSize / 2 - padding, logoSize + padding * 2, logoSize + padding * 2, radius);
-                } else {
-                    ctx.rect(centerX - logoSize / 2 - padding, centerY - logoSize / 2 - padding, logoSize + padding * 2, logoSize + padding * 2);
-                }
-                
-                ctx.fillStyle = borderColor;
-                ctx.fill();
-                
-                // Draw logo
-                ctx.beginPath();
-                if (logoShape === 'circle') {
-                    ctx.arc(centerX, centerY, logoSize / 2, 0, Math.PI * 2);
-                } else if (logoShape === 'rounded') {
-                    const radius = logoSize / 8;
-                    ctx.roundRect(centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize, radius);
-                } else {
-                    ctx.rect(centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
-                }
-                ctx.clip();
-                ctx.drawImage(logoImage, centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
-                ctx.restore();
-            } else if (document.getElementById('emoji-input').value) {
-                const emoji = document.getElementById('emoji-input').value;
-                ctx.font = `${logoSize}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(emoji, centerX, centerY);
-            }
-        }
-
-        function addFrameAndLabel(ctx, size) {
-            const frameStyle = document.getElementById('frame-style').value;
-            const labelText = document.getElementById('label-text').value;
-            const labelSize = parseInt(document.getElementById('label-size-slider').value);
-            const labelColor = document.getElementById('label-color').value;
-            const labelPosition = document.getElementById('label-position').value;
-            const frameBgColor = document.getElementById('frame-bg-color').value;
-            
-            if (frameStyle !== 'none') {
-                const framePadding = 20;
-                const frameWidth = size + framePadding * 2;
-                const frameHeight = size + framePadding * 2 + (labelText ? labelSize + 10 : 0);
-                
-                // Create new canvas for framed version
-                const framedCanvas = document.createElement('canvas');
-                framedCanvas.width = frameWidth;
-                framedCanvas.height = frameHeight;
-                const framedCtx = framedCanvas.getContext('2d');
-                
-                // Fill background
-                framedCtx.fillStyle = frameBgColor;
-                framedCtx.fillRect(0, 0, frameWidth, frameHeight);
-                
-                // Draw frame
-                framedCtx.strokeStyle = labelColor;
-                framedCtx.lineWidth = 2;
-                
-                if (frameStyle === 'border') {
-                    framedCtx.strokeRect(framePadding, framePadding, size, size);
-                } else if (frameStyle === 'rounded') {
-                    framedCtx.beginPath();
-                    framedCtx.roundRect(framePadding, framePadding, size, size, 10);
-                    framedCtx.stroke();
-                } else if (frameStyle === 'badge') {
-                    framedCtx.beginPath();
-                    framedCtx.arc(frameWidth / 2, framePadding + size / 2, size / 2 + 10, 0, Math.PI * 2);
-                    framedCtx.stroke();
-                } else if (frameStyle === 'banner') {
-                    framedCtx.strokeRect(framePadding, framePadding, size, size);
-                    framedCtx.fillStyle = frameBgColor;
-                    framedCtx.fillRect(framePadding, size + framePadding, size, framePadding);
-                }
-                
-                // Draw QR
-                framedCtx.drawImage(ctx.canvas, framePadding, framePadding);
-                
-                // Draw label
-                if (labelText) {
-                    framedCtx.fillStyle = labelColor;
-                    framedCtx.font = `${labelSize}px Syne`;
-                    framedCtx.textAlign = 'center';
-                    const labelY = labelPosition === 'top' ? framePadding - 5 : frameHeight - 5;
-                    framedCtx.fillText(labelText, frameWidth / 2, labelY);
-                }
-                
-                // Replace main canvas content
-                ctx.clearRect(0, 0, size, size);
-                ctx.drawImage(framedCanvas, 0, 0, size, size);
-            } else if (labelText) {
-                // Just label, no frame
-                ctx.fillStyle = labelColor;
-                ctx.font = `${labelSize}px Syne`;
-                ctx.textAlign = 'center';
-                const labelY = labelPosition === 'top' ? -5 : size + labelSize + 5;
-                ctx.fillText(labelText, size / 2, labelY);
-            }
-        }
-
-        function updateScannability() {
-            const pattern = document.querySelector('.pattern-btn.active').dataset.pattern;
-            const logoSize = parseInt(document.getElementById('logo-size-slider').value);
-            const indicator = document.getElementById('scannability-indicator');
-            
-            const riskFactors = (pattern !== 'none' ? 1 : 0) + (logoSize > 25 ? 1 : 0) + (logoImage ? 1 : 0);
-            
-            if (riskFactors >= 2) {
-                indicator.className = 'scannability-indicator scannability-warning';
-                indicator.textContent = '⚠ Scannability Risk - Reduce logo size or remove pattern';
-            } else {
-                indicator.className = 'scannability-indicator scannability-good';
-                indicator.textContent = '✓ Likely Scannable';
-            }
-        }
-
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        logoImage = img;
-                        generateQR();
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function downloadPNG() {
-            const canvas = document.getElementById('qr-canvas');
-            const link = document.createElement('a');
-            link.download = 'qr-code.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        }
-
-        function downloadPNG2x() {
-            downloadScaled(2);
-        }
-
-        function downloadPNG3x() {
-            downloadScaled(3);
-        }
-
-        function downloadScaled(scale) {
-            const canvas = document.getElementById('qr-canvas');
-            const scaledCanvas = document.createElement('canvas');
-            scaledCanvas.width = canvas.width * scale;
-            scaledCanvas.height = canvas.height * scale;
-            const ctx = scaledCanvas.getContext('2d');
-            ctx.scale(scale, scale);
-            ctx.drawImage(canvas, 0, 0);
-            
-            const link = document.createElement('a');
-            link.download = `qr-code@${scale}x.png`;
-            link.href = scaledCanvas.toDataURL();
-            link.click();
-        }
-
-        function downloadSVG() {
-            // For simplicity, we'll just download as PNG. A full implementation would generate SVG
-            downloadPNG();
-        }
-
-        function copyToClipboard() {
-            const canvas = document.getElementById('qr-canvas');
-            canvas.toBlob(function(blob) {
-                navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            });
-        }
-
-        function addToHistory() {
-            const canvas = document.getElementById('qr-canvas');
-            const dataURL = canvas.toDataURL();
-            
-            history.unshift(dataURL);
-            if (history.length > 5) {
-                history.pop();
-            }
-            
-            localStorage.setItem('qrHistory', JSON.stringify(history));
-            loadHistory();
-        }
-
-        function loadHistory() {
-            const strip = document.getElementById('history-strip');
-            strip.innerHTML = '';
-            
-            history.forEach((dataURL, index) => {
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                const img = document.createElement('img');
-                img.src = dataURL;
-                img.className = 'history-qr';
-                item.appendChild(img);
-                item.onclick = () => loadFromHistory(index);
-                strip.appendChild(item);
-            });
-        }
-
-        function loadFromHistory(index) {
-            // This would load the settings from history. For simplicity, we'll just show the QR
-            // In a full implementation, you'd store the settings along with the image
-        }
-
-        function savePreset() {
-            const name = document.getElementById('preset-name').value;
-            if (name) {
-                // Save current settings
-                const settings = {
-                    size: document.getElementById('size-slider').value,
-                    fgColor: document.getElementById('fg-color').value,
-                    bgColor: document.getElementById('bg-color').value,
-                    // ... other settings
-                };
-                presets[name] = settings;
-                localStorage.setItem('qrPresets', JSON.stringify(presets));
-            }
-        }
-
-        function toggleSection(header) {
-            header.parentElement.classList.toggle('collapsed');
-        }
-
-        // Phone mockup
-        document.getElementById('phone-preview').addEventListener('change', function() {
-            const container = document.querySelector('.preview-container');
-            if (this.checked) {
-                container.innerHTML = `
-                    <div class="phone-mockup">
-                        <div class="phone-frame">
-                            <div class="phone-screen">
-                                <img id="phone-qr" class="phone-qr" src="${document.getElementById('qr-canvas').toDataURL()}">
-                            </div>
-                        </div>
-                    </div>
-                    <div id="scannability-indicator" class="scannability-indicator scannability-good">
-                        ✓ Likely Scannable
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <label class="toggle">
-                            <input type="checkbox" id="phone-preview" checked> Phone Mockup
-                        </label>
-                    </div>
-                    <div class="export-options">
-                        <button class="btn" onclick="downloadPNG()">PNG</button>
-                        <button class="btn" onclick="downloadPNG2x()">PNG @2x</button>
-                        <button class="btn" onclick="downloadPNG3x()">PNG @3x</button>
-                        <button class="btn" onclick="downloadSVG()">SVG</button>
-                        <button class="btn secondary" onclick="copyToClipboard()">Copy</button>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div id="preview-wrapper" class="loading-shimmer">
-                        <canvas id="qr-canvas" class="preview-canvas"></canvas>
-                    </div>
-                    <div id="scannability-indicator" class="scannability-indicator scannability-good">
-                        ✓ Likely Scannable
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <label class="toggle">
-                            <input type="checkbox" id="phone-preview"> Phone Mockup
-                        </label>
-                    </div>
-                    <div class="export-options">
-                        <button class="btn" onclick="downloadPNG()">PNG</button>
-                        <button class="btn" onclick="downloadPNG2x()">PNG @2x</button>
-                        <button class="btn" onclick="downloadPNG3x()">PNG @3x</button>
-                        <button class="btn" onclick="downloadSVG()">SVG</button>
-                        <button class="btn secondary" onclick="copyToClipboard()">Copy</button>
-                    </div>
-                `;
-                generateQR();
-            }
-        });
-    </script>
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
 </html>
