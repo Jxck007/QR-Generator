@@ -2,6 +2,10 @@
 
 Small Python CLI tool to generate QR code images from links or plain text.
 
+## Web App
+
+A premium, production-ready QR Code Generator web app is available as `index.html`. Open it in any modern web browser for a full-featured QR generation experience with customization options, patterns, logos, and export capabilities.
+
 ## Requirements
 
 - Python 3.9+
